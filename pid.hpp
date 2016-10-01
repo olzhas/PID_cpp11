@@ -46,6 +46,10 @@ class DiscretePID {
 
     if (fabs(_u[2]) > _saturation) {
       _u[2] = std::copysign(1.0, _u[2]) * _saturation;
+    } else {
+      // anti windup
+      double delta_u = _u[1] - _u[0];
+      _u[2] = _u[1] + delta_u;
     }
   }
 
