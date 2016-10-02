@@ -4,10 +4,12 @@
 
 int main(int argc, char *argv[])
 {
-    DiscretePID pidMotor(0.1, 0.2, 0.2);
+    DiscretePID pid(0.1, 0, 0);
 
-    pidMotor.setReference(0);
-    pidMotor.calculate(1);
+  //pid.assignReadFunc(std::bind);
+  //pid.assignWriteFunc(std::bind);
+
+  pid.setReference(1);
 
     return 0;
 }
