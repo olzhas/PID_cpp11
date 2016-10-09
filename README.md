@@ -1,2 +1,5 @@
-# PID cpp11
-C++11 implementation of PID
+# Discrete PID implementation in C++11
+
+
+
+2016 Olzhas Adiyatov, Robotics Department, Nazarbayev University.

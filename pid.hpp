@@ -1,23 +1,53 @@
 #ifndef PID_H
 #define PID_H
 
+#include <pthread.h>
+#include <sched.h>
+
 #include <chrono>
 #include <cmath>
-#include <initializer_list>
+#include <iostream>
+#include <mutex>
+#include <thread>
+
+constexpr double default_sampling_time{10e-3};
 
 class DiscretePID {
  public:
-  DiscretePID() { ; }
-  DiscretePID(const double& Kp, const double& Ki, const double& Kd)
-      : _Kp(Kp), _Ki(Ki), _Kd(Kd) {
+  DiscretePID() = delete;
+  explicit DiscretePID(const double& Kp, const double& Ki, const double& Kd,
+                       double dt = default_sampling_time,
+                       const bool& exec_at_set_ref = true)
+      : _Kp(Kp),
+        _Ki(Ki),
+        _Kd(Kd),
+        _dt(std::chrono::nanoseconds{static_cast<long>(dt * 1e9)}),
+        _executeAtSetReference(exec_at_set_ref) {
     ;
+  }
+
+  ~DiscretePID() {
+    setRunning(false);
+    if (_pid_thread.joinable()) _pid_thread.join();
   }
 
   double getU() const { return _u[2]; }
   double getControlAction() const { return _u[2]; }
 
-  void setReference(const double& ref) { _r = ref; }
+  void setReference(const double& ref) {
+    std::lock_guard<std::mutex> lock(_reference_mutex);
+    _r = ref;
+    if (_executeAtSetReference && !_isRunning) {
+      setRunning(true);
+      start();
+    };
+  }
   void setY(const double& y) { _y[2] = y; }
+
+  void setRunning(const bool& running) {
+    std::lock_guard<std::mutex> lock(_running_mutex);
+    _isRunning = running;
+  }
 
   double calculate(const double& ref, const double& y) {
     setReference(ref);
@@ -37,12 +67,15 @@ class DiscretePID {
   }
 
   void computeU() {
-    const double& Ts = dt.count();
+    const double& Ts = _dt.count() * 1e-9;
     double a = (_Kp + _Ki * Ts / 2.0 + _Kd / Ts);
     double b = (-_Kp + _Ki * Ts / 2.0 - 2 * _Kd / Ts);
     double c = _Kd / Ts;
 
     _u[2] = _u[1] + a * _e[2] + b * _e[1] + c * _e[0];
+
+    _u[1] = _u[2];
+    _u[0] = _u[1];
 
     if (fabs(_u[2]) > _saturation) {
       _u[2] = std::copysign(1.0, _u[2]) * _saturation;
@@ -61,18 +94,90 @@ class DiscretePID {
 
   void setSaturation(const double& saturation) { _saturation = saturation; }
 
+  void controlLoop() {
+    auto initialTimePoint = std::chrono::high_resolution_clock::now();
+    std::size_t cnt{0};
+
+    auto terminationCondition = [&]() -> bool {
+      std::lock_guard<std::mutex> lock(_running_mutex);
+      bool res = _isRunning;
+      return !res;
+    };
+
+    auto nextTimePoint =
+        [&]() -> std::chrono::high_resolution_clock::time_point {
+      auto timePoint = initialTimePoint + _dt * (++cnt);
+      return timePoint;
+    };
+
+    double systemOutput;
+    double controlAction;
+
+    while (!terminationCondition()) {
+      systemOutput = read();
+      controlAction = calculate(systemOutput);
+      _running_mutex.lock();
+      if (_isRunning) write(controlAction);
+      _running_mutex.unlock();
+      std::this_thread::sleep_until(nextTimePoint());
+    }
+    // just making sure that control action is zeroed before we stop
+    write(0);
+    return;
+  }
+
+  void start() {
+    _pid_thread = std::thread(std::bind(&DiscretePID::controlLoop, this));
+
+    /*
+        if (!pthread_setschedparam(
+                _pid_thread.native_handle(), SCHED_RR,
+                new sched_param{.sched_priority =
+                                    sched_get_priority_max(SCHED_RR)})) {
+          std::cerr << "Error while setting highest priority" << std::endl;
+        }
+    */
+  }
+
+  void assignReadFunc(const std::function<double(void)>& readFn) {
+    read = readFn;
+  }
+
+  void assignWriteFunc(const std::function<void(const double&)>& writeFn) {
+    write = writeFn;
+  }
+
+  void assignRWFunc(const std::function<double(void)>& readFn,
+                    const std::function<void(const double&)>& writeFn) {
+    read = readFn;
+    write = writeFn;
+  }
+
+  void setSamplingTime(const std::chrono::nanoseconds& dt) { _dt = dt; }
+
  private:
   double _Kp{0};
   double _Ki{0};
   double _Kd{0};
-
   double _u[3]{0};
   double _e[3]{0};
   double _r{0};
   double _y[3]{0};
 
   double _saturation{std::nan("")};
-  std::chrono::duration<double> dt{std::chrono::milliseconds(10)};
+  std::chrono::nanoseconds _dt;
+  std::thread _pid_thread;
+
+  std::mutex _running_mutex;
+  std::mutex _reference_mutex;
+
+  bool _isRunning{false};
+  bool _executeAtSetReference{false};
+
+  std::function<double(void)> read;
+  std::function<void(const double&)> write;
 };
+
+typedef std::shared_ptr<DiscretePID> DiscretePIDPtr;
 
 #endif  // PID_H
