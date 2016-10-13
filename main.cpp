@@ -15,7 +15,11 @@ int main(int argc, char *argv[]) {
   std::function<double(void)> readFn;
   // these two function should be bindings to the actual read from sensor
   // and write to command the actuator
+
   pid->assignRWFunc(readFn, writeFn);
+
+  // pid->setSamplingTime(std::chrono::nanoseconds(1e6));
+  // pid->setSaturation(10);
 
   pid->setReference(0);
   std::this_thread::sleep_for(std::chrono::seconds(10));

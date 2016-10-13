@@ -8,3 +8,6 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -march=native -mtune=native -
 aux_source_directory(. SRC_LIST)
 add_executable(${PROJECT_NAME} ${SRC_LIST})
 target_link_libraries(${PROJECT_NAME} ${CMAKE_THREAD_LIBS_INIT} m )
+
+FILE(GLOB_RECURSE LibFiles "*.hpp" "*.h")
+add_custom_target(headers SRC_LIST ${LibFiles})
