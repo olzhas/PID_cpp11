@@ -79,11 +79,16 @@ class DiscretePID {
     _u[1] = _u[2];
     _u[0] = _u[1];
 
+    // anti windup, turning off integration
+    // if (fabs(_u[2]) > _saturation) {
+    //  Ki = 0;
+    // } else {
+    //  Ki = _Ki;
+    // }
+   
     // anti windup
     if (fabs(_u[2]) > _saturation) {
-      Ki = 0;
-    } else {
-      Ki = _Ki;
+      _u[2] = std::copysign(1.0, _u[2]) * _saturation;
     }
   }
 
