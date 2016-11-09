@@ -81,7 +81,6 @@ class DiscretePID {
 
     // anti windup
     if (fabs(_u[2]) > _saturation) {
-      _u[2] = std::copysign(1.0, _u[2]) * _saturation;
       Ki = 0;
     } else {
       Ki = _Ki;
