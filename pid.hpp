@@ -68,8 +68,10 @@ class DiscretePID {
 
   void computeU() {
     const double& Ts = _dt.count() * 1e-9;
-    double a = (_Kp + _Ki * Ts / 2.0 + _Kd / Ts);
-    double b = (-_Kp + _Ki * Ts / 2.0 - 2 * _Kd / Ts);
+    static double Ki = _Ki;
+   
+    double a = (_Kp + Ki * Ts / 2.0 + _Kd / Ts);
+    double b = (-_Kp + Ki * Ts / 2.0 - 2 * _Kd / Ts);
     double c = _Kd / Ts;
 
     _u[2] = _u[1] + a * _e[2] + b * _e[1] + c * _e[0];
@@ -77,12 +79,12 @@ class DiscretePID {
     _u[1] = _u[2];
     _u[0] = _u[1];
 
+    // anti windup
     if (fabs(_u[2]) > _saturation) {
       _u[2] = std::copysign(1.0, _u[2]) * _saturation;
+      Ki = 0;
     } else {
-      // anti windup
-      double delta_u = _u[1] - _u[0];
-      _u[2] = _u[1] + delta_u;
+      Ki = _Ki;
     }
   }
 
