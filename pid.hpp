@@ -99,6 +99,7 @@ class DiscretePID {
   }
 
   void setSaturation(const double& saturation) { _saturation = saturation; }
+  void setExecuteAtSetReference(bool executeAtSetReference) { _executeAtSetReference = executeAtSetReference; }
 
   void controlLoop() {
     auto initialTimePoint = std::chrono::high_resolution_clock::now();
