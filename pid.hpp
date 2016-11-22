@@ -38,7 +38,6 @@ class DiscretePID {
     std::lock_guard<std::mutex> lock(_reference_mutex);
     _r = ref;
     if (_executeAtSetReference && !_isRunning) {
-      setRunning(true);
       start();
     };
   }
@@ -134,8 +133,10 @@ class DiscretePID {
   }
 
   void start() {
+    setRunning(true);
     _pid_thread = std::thread(std::bind(&DiscretePID::controlLoop, this));
 
+   // TODO
     /*
         if (!pthread_setschedparam(
                 _pid_thread.native_handle(), SCHED_RR,
