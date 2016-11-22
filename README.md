@@ -1,6 +1,6 @@
 # Discrete PID implementation in C++11
 
-Simplistic header only library for discrete PID control.
+Simplistic header only library for discrete PID control with anti-windup.
 
 # Getting started
 ## Download
