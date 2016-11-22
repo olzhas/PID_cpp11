@@ -47,4 +47,5 @@ int main(int argc, char *argv[]) {
 ```
 
 ### Author
-2016 Olzhas Adiyatov, Robotics Department, [Nazarbayev University](http://nu.edu.kz/).
+2016 Olzhas Adiyatov, Robotics Department, [ARMS Lab](http://arms.nu.edu.kz/), [Nazarbayev University](http://nu.edu.kz/).
+
