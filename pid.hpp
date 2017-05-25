@@ -51,6 +51,7 @@ class DiscretePID {
   ~DiscretePID() {
     setRunning(false);
     if (_pid_thread.joinable()) _pid_thread.join();
+    write(0);
   }
 
   double getU() const { return _u[2]; }
